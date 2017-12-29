@@ -22,7 +22,7 @@ Note: The name Hastie is from a character in the novel Dr. Jekyll and Mr. Hyde
 
 Install Go: <http://golang.org/doc/install.html#fetch>
 
-Get Hastie: `go get github.com/mkaz/hastie`
+Get Hastie: `go get github.com/fofen/hastie`
 
 If you have your Go environment setup, `go get` will automatically create the binary in $GOPATH/bin.
 
