@@ -27,7 +27,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/russross/blackfriday"
+	"gopkg.in/russross/blackfriday.v2"
 )
 
 // config file items
