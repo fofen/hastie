@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -27,7 +28,7 @@ import (
 	"text/template"
 	"time"
 
-	"gopkg.in/russross/blackfriday.v1"
+	"gopkg.in/russross/blackfriday.v2"
 )
 
 // config file items
@@ -47,11 +48,11 @@ var (
 )
 
 type Page struct {
-	Content, Title, Category, SimpleCategory, Layout, OutFile, Extension, Url, PrevUrl, PrevTitle, NextUrl, NextTitle, PrevCatUrl, PrevCatTitle, NextCatUrl, NextCatTitle string
-	Params                                                                                                                                                                map[string]string
-	Recent                                                                                                                                                                *PagesSlice
-	Date                                                                                                                                                                  time.Time
-	Categories                                                                                                                                                            *CategoryList
+	Content, Title, Category, SimpleCategory, Layout, OutFile, Extension, Url, PrevUrl, PrevTitle, NextUrl, NextTitle, PrevCatUrl, PrevCatTitle, NextCatUrl, NextCatTitle, Toc string
+	Params                                                                                                                                                                     map[string]string
+	Recent                                                                                                                                                                     *PagesSlice
+	Date                                                                                                                                                                       time.Time
+	Categories                                                                                                                                                                 *CategoryList
 }
 
 type PagesSlice []Page
@@ -387,7 +388,7 @@ func readParseFile(filename string) (page Page) {
 	page = Page{
 		Title: "", Category: "", SimpleCategory: "", Content: "", Layout: "", Date: epoch, OutFile: filename, Extension: ".html",
 		Url: "", PrevUrl: "", PrevTitle: "", NextUrl: "", NextTitle: "",
-		PrevCatUrl: "", PrevCatTitle: "", NextCatUrl: "", NextCatTitle: "",
+		PrevCatUrl: "", PrevCatTitle: "", NextCatUrl: "", NextCatTitle: "", Toc: "",
 		Params: make(map[string]string),
 	}
 
@@ -422,6 +423,8 @@ func readParseFile(filename string) (page Page) {
 					page.Extension = "." + value
 				case "date":
 					page.Date, _ = time.Parse("2006-01-02", value[0:10])
+				case "toc":     // added by Fofen, for TOC generation
+					page.Toc = value   
 				default:
 					page.Params[key] = value
 				}
@@ -466,7 +469,7 @@ func readParseFile(filename string) (page Page) {
 	// convert markdown content
 	content := strings.Join(lines, "\n")
 	if (config.UseMarkdown) && (page.Params["markdown"] != "no") {
-		output := markdownRender([]byte(content))
+		output := markdownRender(content, page.Toc)  // render markdown content
 		page.Content = string(output)
 	} else {
 		page.Content = content
@@ -475,25 +478,28 @@ func readParseFile(filename string) (page Page) {
 	return page
 }
 
-func markdownRender(content []byte) []byte {
-	htmlFlags := 0
-	//htmlFlags |= blackfriday.HTML_SKIP_SCRIPT
-	htmlFlags |= blackfriday.HTML_USE_XHTML
-	htmlFlags |= blackfriday.HTML_USE_SMARTYPANTS
-	htmlFlags |= blackfriday.HTML_SMARTYPANTS_FRACTIONS
-	htmlFlags |= blackfriday.HTML_SMARTYPANTS_LATEX_DASHES
-	renderer := blackfriday.HtmlRenderer(htmlFlags, "", "")
-
-	extensions := 0
-	extensions |= blackfriday.EXTENSION_NO_INTRA_EMPHASIS
-	extensions |= blackfriday.EXTENSION_TABLES
-	extensions |= blackfriday.EXTENSION_FENCED_CODE
-	extensions |= blackfriday.EXTENSION_AUTOLINK
-	extensions |= blackfriday.EXTENSION_STRIKETHROUGH
-	extensions |= blackfriday.EXTENSION_SPACE_HEADERS
-
-	return blackfriday.Markdown(content, renderer, extensions)
+// markdown render fuctions, by Fofen
+type inkRenderer struct {
+	defaultR       *blackfriday.HTMLRenderer
 }
+func (r *inkRenderer) RenderHeader(w io.Writer, ast *blackfriday.Node) {
+	r.defaultR.RenderHeader(w, ast)
+}
+func (r *inkRenderer) RenderFooter(w io.Writer, ast *blackfriday.Node) {
+	r.defaultR.RenderFooter(w, ast)
+}
+func (r *inkRenderer) RenderNode(w io.Writer, node *blackfriday.Node, entering bool) blackfriday.WalkStatus {
+	return r.defaultR.RenderNode(w, node, entering)
+}
+func markdownRender(markdown string, Toc string) []byte {
+	if Toc == "yes" {
+		defaultR := blackfriday.NewHTMLRenderer(blackfriday.HTMLRendererParameters{Flags: blackfriday.TOC,})
+		r := inkRenderer{defaultR: defaultR}
+		return blackfriday.Run([]byte(markdown), blackfriday.WithRenderer(&r))
+	} else {
+		return blackfriday.Run([]byte(markdown))
+	}
+} // markdown parsing fuctions
 
 func buildPagesSlice(dir string, globstr string, pages PagesSlice) PagesSlice {
 	readglob := dir + globstr
