@@ -38,7 +38,7 @@ export PATH="$GOPATH/bin:$PATH"
 
 #### Libraries
 
-Uses **blackfriday** for markdown conversion. `go get github.com/russross/blackfriday`
+Uses **blackfriday v2** for markdown conversion. `go get gopkg.in/russross/blackfriday.v2`
 
 
 --------------------------------------------------------------------------------
