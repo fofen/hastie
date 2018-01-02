@@ -140,7 +140,10 @@ Examples:
 
 
 ### Using Filters (Example: Less CSS, CoffeeScript)
-
+Install [Less](http://lesscss.org/):
+      
+      npm install -g less
+      
 Hastie allows for the use of any command-line processing of files, provided the process takes the filename as input and spits out the results. It does so using `processFilters` configuration. You set a file extension mapped to the utility to process and the final extension.
 
 Add follow configuration to hastie.json
